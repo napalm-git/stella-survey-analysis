@@ -1,0 +1,470 @@
+---
+title: "Accent Perception Analysis"
+subtitle: "Stella Survey (Status & Solidarity Ratings)"
+author: "Ersin Gultekin"
+date: "2025-02-28"
+
+format: 
+  docx:
+    toc: true
+    toc-depth: 2
+    number-sections: true
+    highlight-style: github
+    fig-cap-location: bottom
+    linestretch: 1.5
+
+execute:
+  echo: true   
+  warning: false  
+  message: false  
+---
+
+```{r setup}
+# Load required libraries
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(flextable)
+library(viridis)
+
+# Read in the cleaned data
+stella_data <- readRDS("../data/stella_survey_clean.rds")
+
+# Create participant-level data (removing duplicates)
+participant_data <- stella_data %>% 
+  select(ppt_id, gender, age, student, lessons_English, contact_English) %>%
+  distinct()
+
+# Define a custom theme with better spacing for plots
+my_custom_theme <- theme_minimal() +
+  theme(
+    axis.title.x = element_text(margin = margin(t = 20, r = 0, b = 0, l = 0), size = 10),
+    axis.title.y = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0), size = 10),
+    plot.margin = margin(t = 30, r = 30, b = 30, l = 30),
+    plot.title = element_text(margin = margin(b = 15), size = 14),
+    axis.text = element_text(size = 10)
+  )
+```
+
+\newpage
+
+# Introduction
+
+## Topic and Hypotheses
+
+This study investigates language attitudes toward different English accents, focusing on how standard and non-standard accents are perceived in terms of status and solidarity dimensions. It also examines the effects of speaker gender and differences between UK Received Pronunciation (RP) and US General American (GA) accents.
+
+The main hypotheses tested in this study are:
+
+1. **Hypothesis 1**: Standard accents will be rated higher on status dimensions, while non-standard accents will receive higher scores on solidarity dimensions.
+
+2. **Hypothesis 2**: Speaker gender will influence perception of accents, with potential differences in how male and female speech is evaluated on status and solidarity dimensions.
+
+3. **Hypothesis 3**: UK Received Pronunciation (RP) will receive higher status ratings compared to US General American (GA) accents.
+
+## Data Description and Analysis Approach
+
+This analysis uses data from the Stella Survey, which collected perceptions of different English accent varieties from non-native English speakers. The dataset includes `r nrow(stella_data)` observations from `r length(unique(stella_data$ppt_id))` unique participants who evaluated various English accent recordings.
+
+### Packages Used
+
+The analysis was conducted using R with the following packages:
+
+- tidyverse for data manipulation and visualization
+- knitr and kableExtra for table formatting
+- flextable for creating publication-ready tables
+- viridis for colorblind-friendly visualizations
+
+### Data Characteristics
+
+The dataset contains `r nrow(stella_data)` observations with `r ncol(stella_data)` variables. Each participant rated multiple accent samples on scales measuring status and solidarity dimensions. Key variables include:
+
+- `standard`: Whether the accent is classified as standard or non-standard
+- `speaker_gender`: Gender of the speaker (male or female)
+- `country`: Country of origin for the accent (UK or US)
+- `status`: Rating on status dimension (higher values indicate higher perceived status)
+- `solidarity`: Rating on solidarity dimension (higher values indicate higher perceived friendliness/approachability)
+
+### Participant Characteristics
+
+The study included `r length(unique(stella_data$ppt_id))` participants with the following characteristics:
+
+- Gender distribution: `r round(100 * sum(participant_data$gender == "female", na.rm = TRUE) / nrow(participant_data), 1)`% female and `r round(100 * sum(participant_data$gender == "male", na.rm = TRUE) / nrow(participant_data), 1)`% male
+
+- Age range: `r min(participant_data$age, na.rm = TRUE)` to `r max(participant_data$age, na.rm = TRUE)` years (M = `r round(mean(participant_data$age, na.rm = TRUE), 1)`, SD = `r round(sd(participant_data$age, na.rm = TRUE), 1)`)
+
+- Student status: `r round(100 * sum(participant_data$student == "yes", na.rm = TRUE) / nrow(participant_data), 1)`% were currently enrolled as students
+
+- English learning experience: Most participants had completed 8 years of formal English instruction, with an average of `r round(mean(as.numeric(participant_data$lessons_English), na.rm = TRUE), 1)` years across all participants
+
+\newpage
+
+# Results
+
+## Hypothesis 1: Standard vs Non-standard Accents
+
+```{r fig-status-by-accent, fig.cap="Status ratings by accent type. Standard accents received significantly higher status ratings compared to non-standard accents.", fig.width=6, fig.height=4}
+
+# Status by Accent Type
+ggplot(stella_data, aes(x = standard, y = status, fill = standard)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "A") +
+  labs(x = "Accent Type", 
+       y = "Status Rating") +
+  my_custom_theme +
+  theme(legend.position = "none")  
+```
+
+```{r fig-solidarity-by-accent, fig.cap="Solidarity ratings by accent type. Standard and non-standard accents received identical mean solidarity ratings.", fig.width=6, fig.height=4}
+
+# Solidarity by Accent Type
+ggplot(stella_data, aes(x = standard, y = solidarity, fill = standard)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "H") +
+  labs(x = "Accent Type", 
+       y = "Solidarity Rating") +
+  my_custom_theme +
+  theme(legend.position = "none")
+```
+
+```{r results='asis'}
+# Create summary statistics for Hypothesis 1
+h1_summary <- stella_data %>%
+  group_by(standard) %>%
+  summarize(
+    status_mean = mean(status, na.rm = TRUE),
+    status_sd = sd(status, na.rm = TRUE),
+    solidarity_mean = mean(solidarity, na.rm = TRUE),
+    solidarity_sd = sd(solidarity, na.rm = TRUE),
+    n = n() / 2  
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 2))) 
+
+# Create a formatted table
+cat("\n\nTable 1: Status and solidarity ratings by accent type\n\n")
+h1_table <- flextable(h1_summary) %>%
+  set_header_labels(
+    standard = "Standard",
+    status_mean = "Status Mean", 
+    status_sd = "Status SD", 
+    solidarity_mean = "Solidarity Mean", 
+    solidarity_sd = "Solidarity SD", 
+    n = "n") %>%
+  theme_vanilla() %>%
+  padding(padding = 6, part = "all") %>%
+  autofit()
+
+h1_table
+```
+
+<br><br>
+
+The data in @fig-status-by-accent shows clear differences in how standard and non-standard accents are perceived. Standard accents received higher status ratings (M = `r h1_summary$status_mean[h1_summary$standard == "standard"]`, SD = `r h1_summary$status_sd[h1_summary$standard == "standard"]`) compared to non-standard accents (M = `r h1_summary$status_mean[h1_summary$standard == "non-standard"]`, SD = `r h1_summary$status_sd[h1_summary$standard == "non-standard"]`). This supports the first hypothesis that standard accents are associated with higher status.
+
+
+For solidarity ratings shown in @fig-solidarity-by-accent, I observed that standard and non-standard accents received identical mean solidarity ratings (both M = `r h1_summary$solidarity_mean[h1_summary$standard == "standard"]`, with SD = `r h1_summary$solidarity_sd[h1_summary$standard == "standard"]` for standard accents and SD = `r h1_summary$solidarity_sd[h1_summary$standard == "non-standard"]` for non-standard accents). This finding does not support the hypothesis that non-standard accents would be perceived as more friendly, approachable, or relatable, and instead suggests that accent standardness may not impact solidarity perceptions in the participant sample.
+
+## Hypothesis 2: Gender Effect
+
+```{r fig-status-by-gender, fig.cap="Status ratings by speaker gender. Male speakers received higher status ratings than female speakers.", fig.width=6, fig.height=4}
+
+# Status by Gender
+ggplot(stella_data, aes(x = speaker_gender, y = status, fill = speaker_gender)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "C") +  
+  labs(x = "Speaker Gender",
+       y = "Status Rating") +
+  my_custom_theme +
+  theme(legend.position = "none") 
+```
+
+```{r fig-solidarity-by-gender, fig.cap="Solidarity ratings by speaker gender. Female speakers received higher solidarity ratings than male speakers.", fig.width=6, fig.height=4}
+
+# Solidarity by Gender  
+ggplot(stella_data, aes(x = speaker_gender, y = solidarity, fill = speaker_gender)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "D") +
+  labs(x = "Speaker Gender", 
+       y = "Solidarity Rating") +
+  my_custom_theme +
+  theme(legend.position = "none") 
+```
+
+```{r results='asis'}
+# Create summary statistics for Hypothesis 2
+h2_summary <- stella_data %>%
+  group_by(speaker_gender) %>%
+  summarize(
+    status_mean = mean(status, na.rm = TRUE),
+    status_sd = sd(status, na.rm = TRUE),
+    solidarity_mean = mean(solidarity, na.rm = TRUE),
+    solidarity_sd = sd(solidarity, na.rm = TRUE),
+    n = n() / 2  
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 2)))  
+
+# Create a formatted table
+cat("\n\nTable 2: Status and solidarity ratings by speaker gender\n\n")
+h2_table <- flextable(h2_summary) %>%
+  set_header_labels(
+    speaker_gender = "Speaker Gender",
+    status_mean = "Status Mean", 
+    status_sd = "Status SD", 
+    solidarity_mean = "Solidarity Mean", 
+    solidarity_sd = "Solidarity SD", 
+    n = "n") %>%
+  theme_vanilla() %>%
+  padding(padding = 6, part = "all") %>%
+  autofit()
+
+h2_table
+```
+
+<br><br>
+
+The analysis of gender effects seen in @fig-status-by-gender and @fig-solidarity-by-gender reveals interesting patterns in how male and female speakers are perceived. As shown in @fig-status-by-gender, female speakers received lower status ratings (M = `r h2_summary$status_mean[h2_summary$speaker_gender == "female"]`, SD = `r h2_summary$status_sd[h2_summary$speaker_gender == "female"]`) compared to male speakers (M = `r h2_summary$status_mean[h2_summary$speaker_gender == "male"]`, SD = `r h2_summary$status_sd[h2_summary$speaker_gender == "male"]`).
+
+
+For solidarity ratings, @fig-solidarity-by-gender demonstrates that female speakers were rated higher (M = `r h2_summary$solidarity_mean[h2_summary$speaker_gender == "female"]`, SD = `r h2_summary$solidarity_sd[h2_summary$speaker_gender == "female"]`) than male speakers (M = `r h2_summary$solidarity_mean[h2_summary$speaker_gender == "male"]`, SD = `r h2_summary$solidarity_sd[h2_summary$speaker_gender == "male"]`). These findings support the second hypothesis that speaker gender influences perception, with potential implications for how different genders are evaluated in professional and social contexts.
+
+\newpage
+
+## Hypothesis 3: RP vs GA Comparison
+
+```{r fig-status-by-country, fig.cap="Status ratings by country (RP vs GA). UK accents (RP) received higher status ratings than US accents (GA).", fig.width=6, fig.height=4}
+
+# Status by Country
+ggplot(stella_data, aes(x = country, y = status, fill = country)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "E") + 
+  labs(x = "Country",
+       y = "Status Rating") +
+  my_custom_theme +
+  theme(legend.position = "none")  
+```
+
+```{r fig-solidarity-by-country, fig.cap="Solidarity ratings by country (RP vs GA). UK accents (RP) received higher solidarity ratings than US accents (GA).", fig.width=6, fig.height=4}
+
+# Solidarity by Country
+ggplot(stella_data, aes(x = country, y = solidarity, fill = country)) +
+  geom_bar(stat = "identity", alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "F") + 
+  labs(x = "Country",
+       y = "Solidarity Rating") +
+  my_custom_theme +
+  theme(legend.position = "none")  
+```
+
+```{r results='asis'}
+
+# Create summary statistics for Hypothesis 3 - Status
+h3_status_summary <- stella_data %>%
+  group_by(country) %>%
+  summarize(
+    status_mean = mean(status, na.rm = TRUE),
+    status_sd = sd(status, na.rm = TRUE),
+    status_median = median(status, na.rm = TRUE),
+    n = n() / 2  
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 2)))  
+
+# Create a formatted table
+cat("\n\nTable 3: Status ratings by country (RP vs GA)\n\n")
+h3_table_status <- flextable(h3_status_summary) %>%
+  set_header_labels(
+    country = "Country",
+    status_mean = "Status Mean", 
+    status_sd = "Status SD", 
+    status_median = "Status Median", 
+    n = "n") %>%
+  theme_vanilla() %>%
+  padding(padding = 6, part = "all") %>%
+  autofit()
+
+h3_table_status
+```
+
+<br><br>
+
+```{r results='asis'}
+# Create summary statistics for Hypothesis 3 - Solidarity
+h3_solidarity_summary <- stella_data %>%
+  group_by(country) %>%
+  summarize(
+    solidarity_mean = mean(solidarity, na.rm = TRUE),
+    solidarity_sd = sd(solidarity, na.rm = TRUE),
+    solidarity_median = median(solidarity, na.rm = TRUE),
+    n = n() / 2  
+  ) %>%
+  mutate(across(where(is.numeric), ~round(., 2))) 
+
+
+# Create a formatted table
+cat("\n\nTable 4: Solidarity ratings by country (RP vs GA)\n\n")
+h3_table_solidarity <- flextable(h3_solidarity_summary) %>%
+  set_header_labels(
+    country = "Country",
+    solidarity_mean = "Solidarity Mean", 
+    solidarity_sd = "Solidarity SD", 
+    solidarity_median = "Solidarity Median", 
+    n = "n") %>%
+  theme_vanilla() %>%
+  padding(padding = 6, part = "all") %>%
+  autofit()
+
+h3_table_solidarity
+```
+
+<br><br>
+
+Comparing Received Pronunciation (UK) and General American (US) accents reveals differences in both status and solidarity perceptions. As shown in @fig-status-by-country, UK accents received higher status ratings (M = `r h3_status_summary$status_mean[h3_status_summary$country == "UK"]`, SD = `r h3_status_summary$status_sd[h3_status_summary$country == "UK"]`) compared to US accents (M = `r h3_status_summary$status_mean[h3_status_summary$country == "US"]`, SD = `r h3_status_summary$status_sd[h3_status_summary$country == "US"]`).
+
+Similarly, for solidarity ratings, @fig-solidarity-by-country demonstrates that UK accents were also rated higher (M = `r h3_solidarity_summary$solidarity_mean[h3_solidarity_summary$country == "UK"]`, SD = `r h3_solidarity_summary$solidarity_sd[h3_solidarity_summary$country == "UK"]`) than US accents (M = `r h3_solidarity_summary$solidarity_mean[h3_solidarity_summary$country == "US"]`, SD = `r h3_solidarity_summary$solidarity_sd[h3_solidarity_summary$country == "US"]`). This pattern indicates a consistent preference for UK accents across both dimensions of language attitudes.
+
+These findings strongly support the third hypothesis that UK accents (RP) would be rated higher in status than US accents (GA), while additionally revealing that UK accents were also perceived as more friendly and approachable. This suggests that UK accents may carry more prestige and are perceived more positively overall in the context of this study.
+
+\newpage
+
+## Participant Demographics
+
+```{r}
+# Demographics
+demographics_summary <- data.frame(
+  total_participants = nrow(participant_data),
+  female_count = sum(participant_data$gender == "female", na.rm = TRUE),
+  female_percent = round(100 * sum(participant_data$gender == "female", na.rm = TRUE) / nrow(participant_data), 1),
+  male_count = sum(participant_data$gender == "male", na.rm = TRUE),
+  male_percent = round(100 * sum(participant_data$gender == "male", na.rm = TRUE) / nrow(participant_data), 1),
+  mean_age = round(mean(participant_data$age, na.rm = TRUE), 1),
+  sd_age = round(sd(participant_data$age, na.rm = TRUE), 1),
+  min_age = min(participant_data$age, na.rm = TRUE),
+  max_age = max(participant_data$age, na.rm = TRUE)
+)
+
+# English learning characteristics
+english_summary <- data.frame(
+  mean_lessons = round(mean(as.numeric(participant_data$lessons_English), na.rm = TRUE), 1),
+  sd_lessons = round(sd(as.numeric(participant_data$lessons_English), na.rm = TRUE), 1),
+  median_lessons = median(as.numeric(participant_data$lessons_English), na.rm = TRUE),
+  mean_contact = round(mean(participant_data$contact_English, na.rm = TRUE), 1),
+  sd_contact = round(sd(participant_data$contact_English, na.rm = TRUE), 1),
+  median_contact = median(participant_data$contact_English, na.rm = TRUE)
+)
+```
+
+<br><br>
+
+```{r}
+# Create a demographics table
+kable(demographics_summary, 
+      caption = "Table 5: Participant demographics",
+      col.names = c("Total Participants", "Female Count", "Female %", "Male Count", "Male %", 
+                   "Mean Age", "SD Age", "Min Age", "Max Age"),
+      align = "rrrrrrrrr")
+```
+
+<br><br>
+
+```{r}
+# Create a english learning table
+kable(english_summary, 
+      caption = "Table 6: English learning duration and contact frequency",
+      col.names = c("Mean Lessons", "SD Lessons", "Median Lessons", 
+                   "Mean Contact", "SD Contact", "Median Contact"),
+      align = "rrrrrr")
+```
+
+### Demographic Plots
+
+```{r fig-age-distribution, fig.cap="Age distribution of participants. The majority of participants were between 20 and 26 years old, with a mean age of 24.7 years.", fig.width=6, fig.height=4}
+ggplot(stella_data, aes(x = age, fill = as.factor(age))) +
+  geom_bar(alpha = 0.7, width = 0.5) +
+  theme_minimal() +
+  labs(x = "Age",
+       y = "Count") +
+  scale_fill_viridis_d() +
+  my_custom_theme +
+  theme(legend.position = "none")  
+```
+
+The age distribution shown in @fig-age-distribution reveals that most participants were young adults, with a concentration between 20 and 26 years old.
+
+```{r fig-gender-distribution, fig.cap="Gender distribution of participants. The sample included more male participants (66.7%) than female participants (33.3%).", fig.width=6, fig.height=4}
+ggplot(stella_data %>% distinct(ppt_id, .keep_all = TRUE),
+      aes(x = gender, fill = gender)) +
+  geom_bar(alpha = 0.7, width = 0.2) +
+  scale_fill_viridis_d() + 
+  theme_minimal() +
+  labs(x = "Gender", 
+       y = "Count") +
+  my_custom_theme +
+  theme(legend.position = "none") 
+```
+
+@fig-gender-distribution illustrates the gender composition of the participant pool. There is a notable imbalance, with approximately twice as many male participants as female participants. This gender distribution should be taken into account when interpreting the results, particularly for findings related to gender effects in accent perception.
+
+```{r fig-student-status, fig.cap="Distribution of student status among participants.", fig.width=6, fig.height=4}
+
+ggplot(stella_data %>% distinct(ppt_id, .keep_all = TRUE),
+      aes(x = student, fill = student)) +
+  geom_bar(alpha = 0.7, width = 0.2) +
+  theme_minimal() +
+  scale_fill_viridis_d(option = "H") +
+  labs(x = "Student Status", 
+       y = "Count") +
+  my_custom_theme +
+  theme(legend.position = "none")
+```
+
+@fig-student-status shows the distribution of student status among participants. The majority of participants (`r round(100 * sum(participant_data$student == "no", na.rm = TRUE) / nrow(participant_data), 1)`%) were not enrolled as students at the time of data collection. This relatively low proportion of student participants should be considered when interpreting the results, as it may influence how accents are perceived in academic or educational contexts.
+
+\newpage
+
+```{r fig-english-lessons, fig.cap="Distribution of English learning duration. Most participants had between 5 and 8 years of English instruction.", fig.width=6, fig.height=4}
+ggplot(stella_data %>% distinct(ppt_id, .keep_all = TRUE),
+      aes(x = lessons_English, fill = factor(lessons_English))) +
+  geom_bar(alpha = 0.7, width = 0.5) +
+  scale_fill_viridis_d() +
+  theme_minimal() +
+  labs(x = "Years of English Lessons",
+       y = "Count") +
+  my_custom_theme +
+  theme(legend.position = "none") 
+```
+
+As shown in @fig-english-lessons, participants in this study had varying levels of formal English instruction. There is a pronounced peak at 8 years of instruction, with approximately 45 participants reporting this duration, which is significantly more than any other category. While there are smaller numbers of participants with 5-7 years of instruction, the overall pattern indicates that most participants had completed substantial formal English education. This range of English learning experience may influence how participants perceive and evaluate different English accents.
+
+```{r fig-english-contact, fig.cap="Frequency of English contact. Most participants reported moderate levels of regular contact with English.", fig.width=6, fig.height=4}
+ggplot(stella_data %>% distinct(ppt_id, .keep_all = TRUE),
+      aes(x = factor(contact_English, exclude = NULL), 
+          fill = factor(contact_English, exclude = NULL))) +
+  geom_bar(width = 0.5) +
+  scale_fill_viridis_d(na.value = "gray80") +
+  theme_minimal() +
+  labs(x = "Contact Level",
+       y = "Count") +
+  my_custom_theme +
+  theme(legend.position = "none")
+```
+
+@fig-english-contact displays the distribution of participants' reported frequency of contact with English. Contrary to what might be expected, the largest group of participants (approximately 35) reported the lowest level of contact, while the second largest group (approximately 24) reported high contact (level 4). Moderate levels of contact (2-3) were reported by fewer participants. This somewhat polarized pattern of language contact may have important implications for interpreting the results, as participants' varying degrees of familiarity with English could influence their perception of and attitudes toward different English accents, potentially affecting their ratings of status and solidarity dimensions.
+
+\newpage
+
+# Conclusion
+
+The results of this study provide insights into how accent types, speaker gender, and country of origin influence perception in terms of status and solidarity dimensions.
+
+For the first hypothesis, I found that standard accents were indeed rated higher on status measures (as shown in @fig-status-by-accent). However, contrary to my expectations, standard and non-standard accents received identical solidarity ratings, suggesting that accent standardness may not impact perceptions of friendliness or approachability in the sample.
+
+Regarding the second hypothesis, I observed gender differences in both status and solidarity ratings, as illustrated in @fig-status-by-gender and @fig-solidarity-by-gender. This indicates that speaker gender is an important factor in how speech is evaluated, potentially reflecting broader social attitudes and expectations associated with gender.
+
+For the third hypothesis comparing UK (RP) and US (GA) accents, both @fig-status-by-country and @fig-solidarity-by-country clearly demonstrate that UK accents were rated higher in both status and solidarity dimensions. This consistent pattern suggests that UK accents were perceived more positively overall, carrying both more prestige and greater social appeal among the participants.
+
+The demographic characteristics of the participants provide important context for interpreting these results. The majority were young adults (between 20 and 26 years old) and predominantly male (approximately two-thirds). Most participants were not students, which may influence their language attitudes compared to those in academic environments. Additionally, participants typically had substantial formal English instruction (with a pronounced peak at 8 years) but showed a polarized pattern of English contact frequency, with most reporting either very low or relatively high contact rather than moderate levels. These demographic factors likely influenced how participants perceived and evaluated the different English accent varieties in this study.

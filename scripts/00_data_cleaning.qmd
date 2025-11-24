@@ -1,0 +1,44 @@
+# Load required libraries
+
+```{r}
+library(tidyverse)
+library(readr)
+```
+
+# Read and transform data in fewer steps
+```{r}
+stella_data <- read_csv("data/stella_survey.csv", na = "-99") %>%
+  # Filter and select necessary columns
+  filter(interview_mode == "interview") %>%
+  select(ppt_id, age, gender, student, lessons_English, 
+         contact_English, starts_with("status"), starts_with("solidarity")) %>%
+  # Reshape from wide to long format
+  pivot_longer(
+    cols = -c(ppt_id, age, gender, student, lessons_English, contact_English),
+    names_pattern = "(status|solidarity):(.+)",
+    names_to = c(".value", "recording")
+  ) %>%
+  # Extract information from recording IDs
+  separate(recording, 
+          into = c("recording_id", "country", "standard", "speaker_gender"),
+          sep = "_") %>%
+  # Recode and clean variables
+  mutate(
+    # Recode gender and student status
+    gender = recode(gender, "1" = "female", "2" = "male"),
+    student = recode(student, "1" = "no", "2" = "yes"),
+    # Extract numbers from lessons_English
+    lessons_English = parse_number(lessons_English),
+    # Convert to factors
+    gender = as_factor(gender),
+    student = as_factor(student),
+    country = as_factor(country),
+    standard = as_factor(standard),
+    speaker_gender = as_factor(speaker_gender)
+  )
+```
+
+# Save the final dataset
+```{r}
+saveRDS(stella_data, "data/stella_survey_clean.rds")
+```
