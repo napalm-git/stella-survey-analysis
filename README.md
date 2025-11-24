@@ -38,14 +38,14 @@ The project includes a full reproducible pipeline:
   stella_survey.csv
   stella_survey_clean.rds
 
+/outputs
+  01_analysis.docx
+
 /scripts
   00_data_cleaning.qmd
   01_analysis.qmd
 
-/figures
-  (rendered plots from analysis)
 README.md
-.gitignore
 ```
 
 ---
